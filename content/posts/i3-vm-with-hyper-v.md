@@ -58,63 +58,65 @@ Or to be more precise, xrdp acts as a frontend and Xorg will act as the backend.
 
 1. The first thing to do after the first boot is to install the following packages:
 
-```bash
-sudo dnf install xrdp xrdp-selinux xorgxrdp hyperv-daemons
-```
+    ```bash
+    sudo dnf install xrdp xrdp-selinux xorgxrdp hyperv-daemons
+    ```
 
-This will install the required services needed to run a RDP server with Xorg as the backend.
-The `hyperv-daemons` package is something very essential here. It installs a couple
-of daemons that enable clipboard integration and other important features.
+    This will install the required services needed to run a RDP server with Xorg as the backend.
+    The `hyperv-daemons` package is something very essential here. It installs a couple
+    of daemons that enable clipboard integration and other important features.
 
 2. Before starting the xrdp server, you need to optimize some of its configuration.
-The following `sed` commands will handle the optimizations for you:
 
-```bash
-sudo sed -i_orig 's/port=3389/port=vsock:\/\/-1:3389/g' /etc/xrdp/xrdp.ini
-sudo sed -i_orig 's/security_layer=negotiate/security_layer=rdp/g' /etc/xrdp/xrdp.ini
-sudo sed -i_orig 's/crypt_level=high/crypt_level=none/g' /etc/xrdp/xrdp.ini
-sudo sed -i_orig 's/bitmap_compression=true/bitmap_compression=false/g' /etc/xrdp/xrdp.ini
-```
+    The following `sed` commands will handle the optimizations for you:
+
+    ```bash
+    sudo sed -i_orig 's/port=3389/port=vsock:\/\/-1:3389/g' /etc/xrdp/xrdp.ini
+    sudo sed -i_orig 's/security_layer=negotiate/security_layer=rdp/g' /etc/xrdp/xrdp.ini
+    sudo sed -i_orig 's/crypt_level=high/crypt_level=none/g' /etc/xrdp/xrdp.ini
+    sudo sed -i_orig 's/bitmap_compression=true/bitmap_compression=false/g' /etc/xrdp/xrdp.ini
+    ```
 
 3. One of they daemons installed by `hyperv-daemons` will automatically mount
-all drives that are shared with the VM into your home directory. The default name
-for the mount directory is not very *nice*. The next `sed` command renames it
-to `shared-drives`.
 
-```bash
-sudo sed -i 's/FuseMountName=thinclient_drives/FuseMountName=shared-drives/g' /etc/xrdp/sesman.ini
-```
+    all drives that are shared with the VM into your home directory. The default name
+    for the mount directory is not very *nice*. The next `sed` command renames it
+    to `shared-drives`.
+
+    ```bash
+    sudo sed -i 's/FuseMountName=thinclient_drives/FuseMountName=shared-drives/g' /etc/xrdp/sesman.ini
+    ```
 
 4. Allow everyone to create X server sessions (required because of RDP):
 
-```bash
-sudo tee /etc/X11/Xwrapper.config >/dev/null <<EOL
-needs_root_rights=no
-allowed_users=anybody
-EOL
-```
+    ```bash
+    sudo tee /etc/X11/Xwrapper.config >/dev/null <<EOL
+    needs_root_rights=no
+    allowed_users=anybody
+    EOL
+    ```
 
 5. Make sure the Hyper-V specific kernel module is enabled:
 
-```bash
-echo "hv_sock" | sudo tee /etc/modules-load.d/hv_sock.conf
-# Make sure VMware kernel module is blacklisted
-echo "blacklist vmw_vsock_vmci_transport" | sudo tee /etc/modprobe.d/blacklist-vmw_vsock_vmci_transport.conf
-```
+    ```bash
+    echo "hv_sock" | sudo tee /etc/modules-load.d/hv_sock.conf
+    # Make sure VMware kernel module is blacklisted
+    echo "blacklist vmw_vsock_vmci_transport" | sudo tee /etc/modprobe.d/blacklist-vmw_vsock_vmci_transport.conf
+    ```
 
 6. Enable the xrdp service and shutdown the VM:
 
-```bash
-sudo systemctl enable xrdp
-sudo systemctl enable xrdp-sesman
-poweroff
-```
+    ```bash
+    sudo systemctl enable xrdp
+    sudo systemctl enable xrdp-sesman
+    poweroff
+    ```
 
 7. Enable enhanced session mode for the VM (run this as Administrator in powershell):
 
-```powershell
-Set-VM "VM NAME" -EnhancedSessionTransportType HVSocket
-```
+    ```powershell
+    Set-VM "VM NAME" -EnhancedSessionTransportType HVSocket
+    ```
 
 Now you can start the VM again.
 A new dialog should now pop up asking you about resolution. Congrats! You are done!
